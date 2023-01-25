@@ -14,63 +14,6 @@ export default function App() {
    );
 }
 
-const plotData = [
-   {
-      id: "Daten ENTSOG",
-      color: "hsl(100, 70%, 50%)",
-      data: [
-         {
-            x: "plane",
-            y: 126
-         },
-         {
-            x: "helicopter",
-            y: 83
-         },
-         {
-            x: "boat",
-            y: 278
-         },
-         {
-            x: "train",
-            y: 97
-         },
-         {
-            x: "subway",
-            y: 167
-         },
-         {
-            x: "bus",
-            y: 79
-         },
-         {
-            x: "car",
-            y: 261
-         },
-         {
-            x: "moto",
-            y: 11
-         },
-         {
-            x: "bicycle",
-            y: 4
-         },
-         {
-            x: "horse",
-            y: 103
-         },
-         {
-            x: "skateboard",
-            y: 44
-         },
-         {
-            x: "others",
-            y: 166
-         }
-      ]
-   }
-];
-
 function Example() {
    const { isLoading, error, data, isFetching } = useQuery({
       queryKey: ["repoData"],
