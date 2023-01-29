@@ -31,10 +31,16 @@ const axiosENTSOG = async (pointDirection, indicator) => {
    const { data } = await axios.get(
       `https://transparency.entsog.eu/api/v1/operationalData?limit=-1&indicator=${indicator}&periodType=day&pointDirection=${pointDirection}&from=2022-12-01&to=${heute}&timezone=CEST`
    );
+
    return data;
 };
 
-const punkte = [
+// const axiosGASSCO = async id => {
+//    const { data } = await axios.get(`https://umm.gassco.no/ch/2Y/${id}`);
+//    return data;
+// };
+
+const punkteENTSOG = [
    { id: "UK-TSO-0001ITP-00022entry", name: "St. Fergus" },
    { id: "UK-TSO-0001ITP-00091entry", name: "Easington" },
    { id: "be-tso-0001itp-00061entry", name: "Zeebrugge IZT" },
@@ -46,35 +52,58 @@ const punkte = [
    { id: "NL-TSO-0001ITP-00160entry", name: "Emden (EPT1) (GTS)" },
    { id: "DE-TSO-0009ITP-00080entry", name: "Emden (EPT1) (OGE)" },
    { id: "DE-TSO-0005ITP-00081entry", name: "Emden (EPT1) (GUD)" },
-   { id: "DE-TSO-0009ITP-00126entry", name: "Dornum / NETRA (OGE)" }
+   { id: "DE-TSO-0009ITP-00126entry", name: "Dornum / NETRA (OGE)" },
+   { id: "PL-TSO-0001ITP-00096entry", name: "MALLNOW (Exit)" }
 ];
+
+// const punkteGASSCO = [
+//    { id: "1", name: "Dornum" },
+//    { id: "4", name: "Emden" },
+//    { id: "46", name: "Nybro" },
+//    { id: "5", name: "Dunkerque" },
+//    { id: "6", name: "Zeebrugge" },
+//    { id: "7", name: "Easington" },
+//    { id: "8", name: "St.Fergus" },
+//    { id: "9", name: "Fields Delivering into SEGAL" },
+//    { id: "43", name: "Other Exit Nominations" }
+// ];
 
 const Plot = () => {
    const [allocation, setAllocation] = useState(false);
 
-   const indicator = allocation ? "Allocation" : "Physical+Flow";
-
-   console.log(allocation);
-
-   const results = useQueries({
-      queries: punkte.map(el => ({ queryKey: [el.id, indicator], queryFn: () => axiosENTSOG(el.id, indicator) }))
+   const resultsENTSOGFlow = useQueries({
+      queries: punkteENTSOG.map(el => ({ queryKey: [el.id, "Physical+Flow"], queryFn: () => axiosENTSOG(el.id, "Physical+Flow") }))
    });
 
-   const isLoading = results.some(el => el.isLoading);
-   const isError = results.some(el => el.isError);
+   const resultsENTSOGAllocation = useQueries({
+      queries: punkteENTSOG.slice(0, -1).map(el => ({ queryKey: [el.id, "Allocation"], queryFn: () => axiosENTSOG(el.id, "Allocation") }))
+   });
+
+   // const resultsGASSCO = useQueries({
+   //    queries: punkteGASSCO.map(el => ({ queryKey: [el.id, "GASSCO"], queryFn: () => axiosGASSCO(el.id) }))
+   // });
+
+   const isLoading = resultsENTSOGFlow.some(el => el.isLoading) || resultsENTSOGAllocation.some(el => el.isLoading);
+   const isError = resultsENTSOGFlow.some(el => el.isError) || resultsENTSOGAllocation.some(el => el.isError);
 
    if (isLoading) return <div>Loading...</div>;
    if (isError) return <div>Fehler beim Laden!</div>;
 
-   const plotData = results.map(el => ({
-      id: punkte.find(p => p.id === el.data.meta.query.pointDirection).name,
+   const plotDataFlow = resultsENTSOGFlow.map(el => ({
+      id: punkteENTSOG.find(p => p.id === el.data.meta.query.pointDirection).name,
       data: el.data.operationalData.map(d => ({
          x: d.periodFrom.slice(0, 10),
          y: d.value > 1000000 ? Math.round(d.value / 1000000) : Math.round(d.value / 1000) / 1000
       }))
    }));
 
-   // console.log(plotData);
+   const plotDataAllocation = resultsENTSOGAllocation.map(el => ({
+      id: punkteENTSOG.find(p => p.id === el.data.meta.query.pointDirection).name,
+      data: el.data.operationalData.map(d => ({
+         x: d.periodFrom.slice(0, 10),
+         y: d.value > 1000000 ? Math.round(d.value / 1000000) : Math.round(d.value / 1000) / 1000
+      }))
+   }));
 
    return (
       <div className="flex justify-center mt-10">
@@ -82,17 +111,19 @@ const Plot = () => {
             <div className="ml-9 mb-5 space-y-1">
                <h1>ENTSOG Transparency Platform</h1>
                <div className="flex space-x-2 text-xs items-center">
+                  <p>Physical Flow</p>
                   <MySwitch allocation={allocation} setAllocation={setAllocation} />
-                  <p>Allocation (statt Physical Flow)</p>
+                  <p>Allocation</p>
                </div>
             </div>
-            <MyLine data={plotData} />
+            {!allocation && <MyLine data={plotDataFlow} />}
+            {allocation && <MyLine data={plotDataAllocation} myLegendLeft={"Allocation [GWh/d]"} />}
          </div>
       </div>
    );
 };
 
-const MyLine = ({ data }) => (
+const MyLine = ({ data, myLegendLeft = "Physical Flow [GWh/d]" }) => (
    <Line
       theme={{
          fontSize: 9,
@@ -129,7 +160,7 @@ const MyLine = ({ data }) => (
          max: "auto"
       }}
       axisLeft={{
-         legend: "Physical Flow [GWh/d]",
+         legend: myLegendLeft,
          legendOffset: -50,
          legendPosition: "middle"
       }}
