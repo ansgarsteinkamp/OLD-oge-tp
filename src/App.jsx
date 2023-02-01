@@ -2,17 +2,19 @@ import { useState } from "react";
 
 import { QueryClient, QueryClientProvider, useQueries } from "@tanstack/react-query";
 
-import { ResponsiveLine, Line } from "@nivo/line";
+import { Line } from "@nivo/line";
 
 import axios from "axios";
+
+import { subDays, formatISO } from "date-fns";
 
 import MySwitch from "./UI/Switch";
 
 const queryClient = new QueryClient({
    defaultOptions: {
       queries: {
-         staleTime: 120 * 60 * 1000, // 120 Minuten
-         cacheTime: 240 * 60 * 1000 // 240 Minuten
+         staleTime: 240 * 60 * 1000, // 240 Minuten = 4 Stunden
+         cacheTime: 480 * 60 * 1000 // 480 Minuten = 8 Stunden
       }
    }
 });
@@ -28,68 +30,62 @@ export default function App() {
 const heute = new Date().toISOString().slice(0, 10);
 
 const axiosENTSOG = async (pointDirection, indicator) => {
+   const jetzt = new Date();
+   const gestern = subDays(jetzt, 1);
+
+   const from = "2022-12-01";
+   const to = formatISO(gestern, { representation: "date" });
+
    const { data } = await axios.get(
-      `https://transparency.entsog.eu/api/v1/operationalData?limit=-1&indicator=${indicator}&periodType=day&pointDirection=${pointDirection}&from=2022-12-01&to=${heute}&timezone=CEST`
+      `https://transparency.entsog.eu/api/v1/operationalData?limit=-1&cutPeriods=true&periodize=0&indicator=${indicator}&pointDirection=${pointDirection}&from=${from}&to=${to}&timezone=CET&periodType=day`
    );
 
    return data;
 };
 
-// const axiosGASSCO = async id => {
-//    const { data } = await axios.get(`https://umm.gassco.no/ch/2Y/${id}`);
-//    return data;
-// };
-
 const punkteENTSOG = [
-   { id: "UK-TSO-0001ITP-00022entry", name: "St. Fergus" },
-   { id: "UK-TSO-0001ITP-00091entry", name: "Easington" },
-   { id: "be-tso-0001itp-00061entry", name: "Zeebrugge IZT" },
+   // { id: "UK-TSO-0001ITP-00022entry", name: "St. Fergus" },
+   // { id: "UK-TSO-0001ITP-00091entry", name: "Easington" },
+   // { id: "be-tso-0001itp-00061entry", name: "Zeebrugge IZT" },
    // { id: "be-tso-0001itp-00061exit", name: "Zeebrugge IZT exit" },
    // { id: "uk-tso-0004itp-00207entry", name: "Bacton (BBL) entry" },
-   { id: "uk-tso-0004itp-00207exit", name: "Bacton (BBL) (Exit)" },
-   { id: "FR-TSO-0003ITP-00045entry", name: "Dunkerque" },
-   { id: "BE-TSO-0001ITP-00106entry", name: "Zeebrugge ZPT" },
-   { id: "NL-TSO-0001ITP-00160entry", name: "Emden (EPT1) (GTS)" },
-   { id: "DE-TSO-0009ITP-00080entry", name: "Emden (EPT1) (OGE)" },
-   { id: "DE-TSO-0005ITP-00081entry", name: "Emden (EPT1) (GUD)" },
-   { id: "DE-TSO-0009ITP-00126entry", name: "Dornum / NETRA (OGE)" },
-   { id: "PL-TSO-0001ITP-00096entry", name: "MALLNOW (Exit)" }
-];
+   // { id: "uk-tso-0004itp-00207exit", name: "Bacton (BBL) (Exit)" },
+   // { id: "FR-TSO-0003ITP-00045entry", name: "Dunkerque" },
+   // { id: "BE-TSO-0001ITP-00106entry", name: "Zeebrugge ZPT" },
 
-// const punkteGASSCO = [
-//    { id: "1", name: "Dornum" },
-//    { id: "4", name: "Emden" },
-//    { id: "46", name: "Nybro" },
-//    { id: "5", name: "Dunkerque" },
-//    { id: "6", name: "Zeebrugge" },
-//    { id: "7", name: "Easington" },
-//    { id: "8", name: "St.Fergus" },
-//    { id: "9", name: "Fields Delivering into SEGAL" },
-//    { id: "43", name: "Other Exit Nominations" }
-// ];
+   { id: "DE-TSO-0009ITP-00080entry", name: "Emden (EPT1) (OGE) (\u2192 DE)" }, // = Uwe
+   { id: "DE-TSO-0005ITP-00081entry", name: "Emden (EPT1) (GUD) (\u2192 DE)" }, // = Uwe
+   { id: "NL-TSO-0001ITP-00160entry", name: "Emden (EPT1) (GTS) (\u2192 NL)" }, // = Uwe
+   { id: "DE-TSO-0002ITP-00105entry", name: "Emden (EPT1) (Thyssengas) (\u2192 DE)" },
+   // { id: "DE-TSO-0005ITP-00086entry", name: "Emden (NPT) (GUD) (\u2192 DE)" }, // "No Data Available"
+   // { id: "NL-TSO-0001ITP-00161entry", name: "Emden (NPT) (GTS) (\u2192 NL)" }, // "No Data Available"
+   // { id: "DE-TSO-0002ITP-00075entry", name: "Emden (NPT) (Thyssengas) (\u2192 DE)" }, // "No Data Available"
+   { id: "DE-TSO-0009ITP-00126entry", name: "Dornum / NETRA (OGE) (\u2192 DE)" }, // = Uwe
+   { id: "DE-TSO-0005ITP-00188entry", name: "Dornum / NETRA (GUD) (\u2192 DE)" },
+   // { id: "DE-TSO-0013ITP-00211entry", name: "Dornum / NETRA (jordgas Transport) (\u2192 DE)" }, // "No Data Available"
+   { id: "DE-TSO-0009ITP-00525entry", name: "Dornum GASPOOL (\u2192 DE)" },
+   { id: "DK-TSO-0001ITP-00097entry", name: "Nybro (\u2192 DK)" },
+   { id: "de-tso-0001itp-00096exit", name: "Mallnow (\u2192 PL)" }
+];
 
 const Plot = () => {
    const [allocation, setAllocation] = useState(false);
 
-   const resultsENTSOGFlow = useQueries({
+   const resultsFlow = useQueries({
       queries: punkteENTSOG.map(el => ({ queryKey: [el.id, "Physical+Flow"], queryFn: () => axiosENTSOG(el.id, "Physical+Flow") }))
    });
 
-   const resultsENTSOGAllocation = useQueries({
-      queries: punkteENTSOG.slice(0, -1).map(el => ({ queryKey: [el.id, "Allocation"], queryFn: () => axiosENTSOG(el.id, "Allocation") }))
+   const resultsAllocation = useQueries({
+      queries: punkteENTSOG.map(el => ({ queryKey: [el.id, "Allocation"], queryFn: () => axiosENTSOG(el.id, "Allocation") }))
    });
 
-   // const resultsGASSCO = useQueries({
-   //    queries: punkteGASSCO.map(el => ({ queryKey: [el.id, "GASSCO"], queryFn: () => axiosGASSCO(el.id) }))
-   // });
-
-   const isLoading = resultsENTSOGFlow.some(el => el.isLoading) || resultsENTSOGAllocation.some(el => el.isLoading);
-   const isError = resultsENTSOGFlow.some(el => el.isError) || resultsENTSOGAllocation.some(el => el.isError);
+   const isLoading = resultsFlow.some(el => el.isLoading) || resultsAllocation.some(el => el.isLoading);
+   const isError = resultsFlow.some(el => el.isError) || resultsAllocation.some(el => el.isError);
 
    if (isLoading) return <div>Loading...</div>;
    if (isError) return <div>Fehler beim Laden!</div>;
 
-   const plotDataFlow = resultsENTSOGFlow.map(el => ({
+   const plotDataFlow = resultsFlow.map(el => ({
       id: punkteENTSOG.find(p => p.id === el.data.meta.query.pointDirection).name,
       data: el.data.operationalData.map(d => ({
          x: d.periodFrom.slice(0, 10),
@@ -97,7 +93,7 @@ const Plot = () => {
       }))
    }));
 
-   const plotDataAllocation = resultsENTSOGAllocation.map(el => ({
+   const plotDataAllocation = resultsAllocation.map(el => ({
       id: punkteENTSOG.find(p => p.id === el.data.meta.query.pointDirection).name,
       data: el.data.operationalData.map(d => ({
          x: d.periodFrom.slice(0, 10),
@@ -199,73 +195,5 @@ const MyLine = ({ data, myLegendLeft = "Physical Flow [GWh/d]" }) => (
       height={500}
       animate={true}
       // enableSlices={false}
-   />
-);
-
-const MyResponsiveLine = ({ data }) => (
-   <ResponsiveLine
-      data={data}
-      margin={{ top: 50, right: 110, bottom: 100, left: 60 }}
-      xScale={{ type: "point" }}
-      yScale={{
-         type: "linear",
-         min: 0,
-         max: "auto",
-         stacked: true,
-         reverse: false
-      }}
-      yFormat=" >-.2f"
-      axisTop={null}
-      axisRight={null}
-      axisBottom={{
-         orient: "bottom",
-         tickSize: 5,
-         tickPadding: 5,
-         tickRotation: -45,
-         legend: "",
-         legendOffset: 36,
-         legendPosition: "middle"
-      }}
-      axisLeft={{
-         orient: "left",
-         tickSize: 5,
-         tickPadding: 5,
-         tickRotation: 0,
-         legend: "MWh/d",
-         legendOffset: -50,
-         legendPosition: "middle"
-      }}
-      pointColor={{ from: "color", modifiers: [] }}
-      pointBorderWidth={2}
-      pointBorderColor={{ from: "serieColor" }}
-      pointLabelYOffset={-12}
-      enableArea={true}
-      useMesh={true}
-      legends={[
-         {
-            anchor: "bottom-right",
-            direction: "column",
-            justify: false,
-            translateX: 100,
-            translateY: 0,
-            itemsSpacing: 0,
-            itemDirection: "left-to-right",
-            itemWidth: 80,
-            itemHeight: 20,
-            itemOpacity: 0.75,
-            symbolSize: 12,
-            symbolShape: "circle",
-            symbolBorderColor: "rgba(0, 0, 0, .5)",
-            effects: [
-               {
-                  on: "hover",
-                  style: {
-                     itemBackground: "rgba(0, 0, 0, .03)",
-                     itemOpacity: 1
-                  }
-               }
-            ]
-         }
-      ]}
    />
 );
