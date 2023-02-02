@@ -57,8 +57,8 @@ const punkte = [
    { id: "DE-TSO-0009ITP-00126entry", name: "Dornum OGE" }, // Dornum / NETRA (OGE)
    { id: "DE-TSO-0005ITP-00188entry", name: "Dornum GUD" }, // Dornum / NETRA (GUD) (ignorieren beim Physical Flow!)
    { id: "DE-TSO-0009ITP-00525entry", name: "Dornum GASPOOL" }, // Dornum GASPOOL (ignorieren beim Physical Flow!)
-   { id: "dk-tso-0001itp-00630entry", name: "Nybro (NO \u2192 PL)" },
-   { id: "de-tso-0001itp-00096exit", name: "Mallnow (D \u2192 PL)" }
+   { id: "de-tso-0001itp-00096exit", name: "Mallnow (D \u2192 PL)" },
+   { id: "dk-tso-0001itp-00630entry", name: "Nybro (NO \u2192 PL)" }
 ];
 
 const Plot = () => {
@@ -115,8 +115,8 @@ const Plot = () => {
    const yAchseSummeFlowEmden = zipWith(yAchseFlowEmdenOGE, yAchseFlowEmdenGUD, yAchseFlowEmdenGTS, (a, b, c) => a + b + c);
    const yAchseSummeFlowDornum = yAchseFlowDornumOGE;
 
-   plotDataFlow.push({ id: "Emden (Summe Entry)", data: zipWith(xAchseFlowEmdenOGE, yAchseSummeFlowEmden, (a, b) => ({ x: a, y: b })) });
    plotDataFlow.push({ id: "Dornum (Summe Entry)", data: zipWith(xAchseFlowDornumOGE, yAchseSummeFlowDornum, (a, b) => ({ x: a, y: b })) });
+   plotDataFlow.push({ id: "Emden (Summe Entry)", data: zipWith(xAchseFlowEmdenOGE, yAchseSummeFlowEmden, (a, b) => ({ x: a, y: b })) });
 
    const plotDataAllocation = resultsAllocation.map(el => ({
       id: punkte.find(p => p.id === el.data.meta.query.pointDirection).name,
@@ -162,33 +162,60 @@ const Plot = () => {
    const yAchseSummeAllocationDornum = zipWith(yAchseAllocationDornumOGE, yAchseAllocationDornumGUD, yAchseAllocationDornumGASPOOL, (a, b, c) => a + b + c);
 
    plotDataAllocation.push({
-      id: "Emden (Summe Entry)",
-      data: zipWith(xAchseAllocationEmdenOGE, yAchseSummeAllocationEmden, (a, b) => ({ x: a, y: b })).filter(el => !isNaN(el.y))
-   });
-   plotDataAllocation.push({
       id: "Dornum (Summe Entry)",
       data: zipWith(xAchseAllocationDornumOGE, yAchseSummeAllocationDornum, (a, b) => ({ x: a, y: b })).filter(el => !isNaN(el.y))
    });
+   plotDataAllocation.push({
+      id: "Emden (Summe Entry)",
+      data: zipWith(xAchseAllocationEmdenOGE, yAchseSummeAllocationEmden, (a, b) => ({ x: a, y: b })).filter(el => !isNaN(el.y))
+   });
+
+   const flowPlot = plotDataFlow.filter(
+      el =>
+         el.id !== "Emden OGE" &&
+         el.id !== "Emden GUD" &&
+         el.id !== "Emden GTS" &&
+         el.id !== "Emden TG" &&
+         el.id !== "Dornum OGE" &&
+         el.id !== "Dornum GUD" &&
+         el.id !== "Dornum GASPOOL"
+   );
+
+   const allocationPlot = plotDataAllocation.filter(
+      el =>
+         el.id !== "Emden OGE" &&
+         el.id !== "Emden GUD" &&
+         el.id !== "Emden GTS" &&
+         el.id !== "Emden TG" &&
+         el.id !== "Dornum OGE" &&
+         el.id !== "Dornum GUD" &&
+         el.id !== "Dornum GASPOOL"
+   );
+
+   const maxY = Math.max(...flowPlot.map(el => Math.max(...el.data.map(el => el.y))), ...allocationPlot.map(el => Math.max(...el.data.map(el => el.y))));
 
    return (
       <div className="flex justify-center mt-10">
          <div>
-            <div className="ml-9 mb-5 space-y-1">
-               <h1>ENTSOG Transparency Platform</h1>
-               <div className="flex space-x-2 text-xs items-center">
+            <div className="ml-9 mb-5">
+               <div className="mb-2">
+                  <h1 className="font-semibold text-lg">Einfluss der Baltic Pipe auf Importe aus Norwegen</h1>
+                  <h2 className="text-[0.5rem] text-stone-400">Daten der ENTSOG Transparency Platform</h2>
+               </div>
+               <div className="flex space-x-1.5 text-xs items-center">
                   <p>Physical Flow</p>
                   <MySwitch allocation={allocation} setAllocation={setAllocation} />
                   <p>Allocation</p>
                </div>
             </div>
-            {!allocation && <MyLine data={plotDataFlow} />}
-            {allocation && <MyLine data={plotDataAllocation} myLegendLeft={"Allocation [GWh/d]"} />}
+            {!allocation && <MyLine data={flowPlot} maxY={maxY} />}
+            {allocation && <MyLine data={allocationPlot} myLegendLeft={"Allocation [GWh/d]"} />}
          </div>
       </div>
    );
 };
 
-const MyLine = ({ data, myLegendLeft = "Physical Flow [GWh/d]" }) => (
+const MyLine = ({ data, maxY, myLegendLeft = "Physical Flow [GWh/d]" }) => (
    <Line
       theme={{
          fontSize: 10,
@@ -211,7 +238,7 @@ const MyLine = ({ data, myLegendLeft = "Physical Flow [GWh/d]" }) => (
          }
       }}
       data={data}
-      colors={{ scheme: "paired" }}
+      // colors={{ scheme: "paired" }}
       xScale={{
          type: "time",
          format: "%Y-%m-%d",
@@ -222,7 +249,7 @@ const MyLine = ({ data, myLegendLeft = "Physical Flow [GWh/d]" }) => (
       yScale={{
          type: "linear",
          min: 0,
-         max: "auto"
+         max: maxY
       }}
       axisLeft={{
          legend: myLegendLeft,
@@ -259,8 +286,8 @@ const MyLine = ({ data, myLegendLeft = "Physical Flow [GWh/d]" }) => (
          }
       ]}
       enableSlices="x"
-      margin={{ top: 0, right: 200, bottom: 100, left: 60 }}
-      width={1000}
+      margin={{ top: 0, right: 150, bottom: 100, left: 60 }}
+      width={900}
       height={500}
       animate={true}
       // enableSlices={false}
