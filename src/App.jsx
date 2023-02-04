@@ -7,7 +7,8 @@ import { Line } from "@nivo/line";
 import axios from "axios";
 
 import { subDays, formatISO } from "date-fns";
-import isEqual from "lodash/head.js";
+
+import isEqual from "lodash/isEqual.js";
 import zipWith from "lodash/zipWith.js";
 
 import MySwitch from "./UI/Switch";
@@ -95,14 +96,14 @@ const Plot = () => {
    const isError = resultsFlow.some(el => el.isError) || resultsAllocation.some(el => el.isError);
 
    if (isLoading) return <div className="flex justify-center mt-20 animate-pulse">Datenabruf ENTSOG Transparency Platform</div>;
-   if (isError) return <div className="flex justify-center mt-20 animate-pulse">Serverfehler ENTSOG Transparency Platform</div>;
+   if (isError) return <div className="flex justify-center mt-20">Serverfehler ENTSOG Transparency Platform</div>;
 
    let einheit = MSm3 ? "MSm³" : "GWh";
    einheit += proStunde ? "/h" : "/d";
 
-   let legendLeft = allocation ? "Allokation in " : "Gasfluss in ";
-   legendLeft += MSm3 ? "MSm³" : "GWh";
-   legendLeft += proStunde ? "/h (Tagesmittel)" : "/d";
+   let legendeLinks = allocation ? "Allokation in " : "Gasfluss in ";
+   legendeLinks += einheit;
+   legendeLinks += proStunde ? " (Tagesmittel)" : "";
 
    const plotDataFlow = resultsToPlotData(resultsFlow, MSm3, proStunde);
 
@@ -240,14 +241,14 @@ const Plot = () => {
                   </div>
                </div>
             </div>
-            {!allocation && <MyLine data={flowPlot} maxY={maxY} myLegendLeft={legendLeft} einheitTooltip={einheit} />}
-            {allocation && <MyLine data={allocationPlot} maxY={maxY} myLegendLeft={legendLeft} einheitTooltip={einheit} />}
+            {!allocation && <MyLine data={flowPlot} maxY={maxY} legendeLinks={legendeLinks} einheitTooltip={einheit} />}
+            {allocation && <MyLine data={allocationPlot} maxY={maxY} legendeLinks={legendeLinks} einheitTooltip={einheit} />}
          </div>
       </div>
    );
 };
 
-const MyLine = ({ data, maxY, myLegendLeft, einheitTooltip }) => {
+const MyLine = ({ data, maxY, legendeLinks, einheitTooltip }) => {
    return (
       <Line
          theme={{
@@ -291,7 +292,7 @@ const MyLine = ({ data, maxY, myLegendLeft, einheitTooltip }) => {
             })} ${einheitTooltip}`
          }
          axisLeft={{
-            legend: myLegendLeft,
+            legend: legendeLinks,
             legendOffset: -48,
             legendPosition: "middle"
          }}
@@ -332,7 +333,6 @@ const MyLine = ({ data, maxY, myLegendLeft, einheitTooltip }) => {
          width={900}
          height={500}
          animate={true}
-         // enableSlices={false}
       />
    );
 };
