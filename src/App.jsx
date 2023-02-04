@@ -58,11 +58,30 @@ const punkte = [
    { id: "DE-TSO-0005ITP-00188entry", name: "Dornum GUD" }, // Dornum / NETRA (GUD) (ignorieren beim Physical Flow!)
    { id: "DE-TSO-0009ITP-00525entry", name: "Dornum GASPOOL" }, // Dornum GASPOOL (ignorieren beim Physical Flow!)
    { id: "de-tso-0001itp-00096exit", name: "Mallnow (D \u2192 PL)" },
-   { id: "dk-tso-0001itp-00630entry", name: "Nybro (NO \u2192 PL)" }
+   { id: "dk-tso-0001itp-00630entry", name: "Nybro (NO \u2192 PL)" },
+   { id: "FR-TSO-0003ITP-00045entry", name: "Dunkerque (NO \u2192 FR)" },
+   { id: "BE-TSO-0001ITP-00106entry", name: "Zeebrugge ZPT (NO \u2192 BE)" }
 ];
+
+const resultsToPlotData = (results, MSm3, proStunde) => {
+   let faktor = 1 / (24 * 1000000); // GWh/h (Tagesmittel)
+   if (!MSm3 && !proStunde) faktor = faktor * 24; // GWh/d
+   if (MSm3 && !proStunde) faktor = faktor * 2.2; // MSm³/d
+   if (MSm3 && proStunde) faktor = (faktor * 2.2) / 24; // MSm³/h (Tagesmittel)
+
+   return results.map(el => ({
+      id: punkte.find(p => p.id === el.data.meta.query.pointDirection).name,
+      data: el.data.operationalData.map(d => ({
+         x: d.periodFrom.slice(0, 10),
+         y: d.value * faktor
+      }))
+   }));
+};
 
 const Plot = () => {
    const [allocation, setAllocation] = useState(false);
+   const [MSm3, setMSm3] = useState(false);
+   const [proStunde, setProStunde] = useState(false);
 
    const resultsFlow = useQueries({
       queries: punkte.map(el => ({ queryKey: [el.id, "Physical+Flow"], queryFn: () => axiosENTSOG(el.id, "Physical+Flow") }))
@@ -75,16 +94,17 @@ const Plot = () => {
    const isLoading = resultsFlow.some(el => el.isLoading) || resultsAllocation.some(el => el.isLoading);
    const isError = resultsFlow.some(el => el.isError) || resultsAllocation.some(el => el.isError);
 
-   if (isLoading) return <div>Loading...</div>;
-   if (isError) return <div>Fehler beim Laden!</div>;
+   if (isLoading) return <div className="flex justify-center mt-20 animate-pulse">Datenabruf ENTSOG Transparency Platform</div>;
+   if (isError) return <div className="flex justify-center mt-20 animate-pulse">Serverfehler ENTSOG Transparency Platform</div>;
 
-   const plotDataFlow = resultsFlow.map(el => ({
-      id: punkte.find(p => p.id === el.data.meta.query.pointDirection).name,
-      data: el.data.operationalData.map(d => ({
-         x: d.periodFrom.slice(0, 10),
-         y: d.value > 1000000 ? Math.round(d.value / 1000000) : Math.round(d.value / 1000) / 1000
-      }))
-   }));
+   let einheit = MSm3 ? "MSm³" : "GWh";
+   einheit += proStunde ? "/h" : "/d";
+
+   let legendLeft = allocation ? "Allokation in " : "Gasfluss in ";
+   legendLeft += MSm3 ? "MSm³" : "GWh";
+   legendLeft += proStunde ? "/h (Tagesmittel)" : "/d";
+
+   const plotDataFlow = resultsToPlotData(resultsFlow, MSm3, proStunde);
 
    const xAchseFlowEmdenOGE = plotDataFlow.find(el => el.id === "Emden OGE").data.map(el => el.x);
    const xAchseFlowEmdenGUD = plotDataFlow.find(el => el.id === "Emden GUD").data.map(el => el.x);
@@ -102,7 +122,7 @@ const Plot = () => {
       !isEqual(xAchseFlowEmdenOGE, xAchseFlowDornumGUD) ||
       !isEqual(xAchseFlowEmdenOGE, xAchseFlowDornumGASPOOL)
    )
-      return <div>Fehler der Zeitachsen Physical Flow</div>;
+      return <div>Datenfehler ENTSOG-TP (inkonsistente Zeitachsen Gasfluss)</div>;
 
    const yAchseFlowEmdenOGE = plotDataFlow.find(el => el.id === "Emden OGE").data.map(el => el.y);
    const yAchseFlowEmdenGUD = plotDataFlow.find(el => el.id === "Emden GUD").data.map(el => el.y);
@@ -124,13 +144,7 @@ const Plot = () => {
       data: zipWith(xAchseFlowEmdenOGE, yAchseSummeFlowEmden, (a, b) => ({ x: a, y: b })).filter(el => !isNaN(el.y))
    });
 
-   const plotDataAllocation = resultsAllocation.map(el => ({
-      id: punkte.find(p => p.id === el.data.meta.query.pointDirection).name,
-      data: el.data.operationalData.map(d => ({
-         x: d.periodFrom.slice(0, 10),
-         y: d.value > 1000000 ? Math.round(d.value / 1000000) : Math.round(d.value / 1000) / 1000
-      }))
-   }));
+   const plotDataAllocation = resultsToPlotData(resultsAllocation, MSm3, proStunde);
 
    const xAchseAllocationEmdenOGE = plotDataAllocation.find(el => el.id === "Emden OGE").data.map(el => el.x);
    const xAchseAllocationEmdenGUD = plotDataAllocation.find(el => el.id === "Emden GUD").data.map(el => el.x);
@@ -148,7 +162,7 @@ const Plot = () => {
       !isEqual(xAchseAllocationEmdenOGE, xAchseAllocationDornumGUD) ||
       !isEqual(xAchseAllocationEmdenOGE, xAchseAllocationDornumGASPOOL)
    )
-      return <div>Fehler der Zeitachsen Allocation</div>;
+      return <div>Datenfehler ENTSOG-TP (inkonsistente Zeitachsen Allokation)</div>;
 
    const yAchseAllocationEmdenOGE = plotDataAllocation.find(el => el.id === "Emden OGE").data.map(el => el.y);
    const yAchseAllocationEmdenGUD = plotDataAllocation.find(el => el.id === "Emden GUD").data.map(el => el.y);
@@ -203,99 +217,122 @@ const Plot = () => {
    return (
       <div className="flex justify-center mt-10">
          <div>
-            <div className="ml-9 mb-5">
-               <div className="mb-2">
-                  <h1 className="font-semibold text-lg">Einfluss der Baltic Pipe auf Importe aus Norwegen</h1>
-                  <h2 className="text-[0.5rem] text-stone-400">Daten der ENTSOG Transparency Platform</h2>
+            <div className="ml-9 mb-6">
+               <div className="mb-3">
+                  <h1 className="font-semibold text-2xl">Einfluss der Baltic Pipe auf Importe aus Norwegen</h1>
+                  <h2 className="text-[0.6rem] text-stone-400">Daten der ENTSOG Transparency Platform</h2>
                </div>
-               <div className="flex space-x-1.5 text-xs items-center">
-                  <p>Physical Flow</p>
-                  <MySwitch allocation={allocation} setAllocation={setAllocation} />
-                  <p>Allocation</p>
+               <div className="flex space-x-6 text-sm">
+                  <div className="flex space-x-1.5 items-center">
+                     <p>Gasfluss</p>
+                     <MySwitch checked={allocation} setChecked={setAllocation} />
+                     <p>Allokation</p>
+                  </div>
+                  <div className="flex space-x-1.5 items-center">
+                     <p>GWh</p>
+                     <MySwitch checked={MSm3} setChecked={setMSm3} />
+                     <p>MSm³</p>
+                  </div>
+                  <div className="flex space-x-1.5 items-center">
+                     <p>pro Tag</p>
+                     <MySwitch checked={proStunde} setChecked={setProStunde} />
+                     <p>pro Stunde (Tagesmittel)</p>
+                  </div>
                </div>
             </div>
-            {!allocation && <MyLine data={flowPlot} maxY={maxY} />}
-            {allocation && <MyLine data={allocationPlot} myLegendLeft={"Allocation [GWh/d]"} />}
+            {!allocation && <MyLine data={flowPlot} maxY={maxY} myLegendLeft={legendLeft} einheitTooltip={einheit} />}
+            {allocation && <MyLine data={allocationPlot} maxY={maxY} myLegendLeft={legendLeft} einheitTooltip={einheit} />}
          </div>
       </div>
    );
 };
 
-const MyLine = ({ data, maxY, myLegendLeft = "Physical Flow [GWh/d]" }) => (
-   <Line
-      theme={{
-         fontSize: 10,
-         axis: {
-            legend: {
-               text: { fontSize: 11 }
-            }
-         },
-         tooltip: {
-            container: {
-               background: "#ffffff",
-               color: "#333333",
-               fontSize: 8
+const MyLine = ({ data, maxY, myLegendLeft, einheitTooltip }) => {
+   return (
+      <Line
+         theme={{
+            fontSize: 11,
+            axis: {
+               legend: {
+                  text: { fontSize: 12, fontWeight: "bold" }
+               }
             },
-            basic: {},
-            chip: {},
-            table: {},
-            tableCell: {},
-            tableCellValue: {}
+            tooltip: {
+               container: {
+                  background: "#ffffff",
+                  color: "#333333",
+                  fontSize: 8
+               },
+               basic: {},
+               chip: {},
+               table: {},
+               tableCell: {},
+               tableCellValue: {}
+            }
+         }}
+         data={data}
+         colors={{ scheme: "nivo" }}
+         xScale={{
+            type: "time",
+            format: "%Y-%m-%d",
+            useUTC: false,
+            precision: "day"
+         }}
+         xFormat="time:%Y-%m-%d"
+         yScale={{
+            type: "linear",
+            min: 0,
+            max: maxY
+         }}
+         // yFormat=" >-.3~r"
+         yFormat={value =>
+            `${Number(value).toLocaleString("de-DE", {
+               maximumSignificantDigits: 3
+            })} ${einheitTooltip}`
          }
-      }}
-      data={data}
-      // colors={{ scheme: "paired" }}
-      xScale={{
-         type: "time",
-         format: "%Y-%m-%d",
-         useUTC: false,
-         precision: "day"
-      }}
-      xFormat="time:%Y-%m-%d"
-      yScale={{
-         type: "linear",
-         min: 0,
-         max: maxY
-      }}
-      axisLeft={{
-         legend: myLegendLeft,
-         legendOffset: -50,
-         legendPosition: "middle"
-      }}
-      axisBottom={{
-         format: "%d.%m.",
-         tickValues: "every 1 week"
-      }}
-      curve="monotoneX"
-      pointSize={3}
-      pointBorderWidth={1}
-      pointBorderColor={{
-         from: "color",
-         modifiers: [["darker", 0.3]]
-      }}
-      useMesh={true}
-      legends={[
-         {
-            anchor: "bottom-right",
-            direction: "column",
-            justify: false,
-            translateX: 100,
-            translateY: 0,
-            itemsSpacing: 0,
-            itemDirection: "left-to-right",
-            itemWidth: 80,
-            itemHeight: 20,
-            itemOpacity: 0.75,
-            symbolSize: 8,
-            symbolShape: "circle",
-            symbolBorderColor: "rgba(0, 0, 0, .5)"
-         }
-      ]}
-      enableSlices="x"
-      margin={{ top: 0, right: 150, bottom: 100, left: 60 }}
-      width={900}
-      height={500}
-      animate={true}
-      // enableSlices={false}
-   />
-);
+         axisLeft={{
+            legend: myLegendLeft,
+            legendOffset: -48,
+            legendPosition: "middle"
+         }}
+         axisBottom={{
+            format: "%d.%m.",
+            tickValues: "every 1 week",
+            legend: "Datum",
+            legendOffset: 40,
+            legendPosition: "middle"
+         }}
+         curve="monotoneX"
+         pointSize={3}
+         pointBorderWidth={1}
+         pointBorderColor={{
+            from: "color",
+            modifiers: [["darker", 0.3]]
+         }}
+         useMesh={true}
+         legends={[
+            {
+               anchor: "bottom-right",
+               direction: "column",
+               justify: false,
+               translateX: 100,
+               translateY: 0,
+               itemsSpacing: 0,
+               itemDirection: "left-to-right",
+               itemWidth: 80,
+               itemHeight: 20,
+               itemOpacity: 0.75,
+               symbolSize: 10,
+               symbolShape: "circle",
+               symbolBorderColor: "rgba(0, 0, 0, .5)"
+            }
+         ]}
+         enableSlices="x"
+         margin={{ top: 0, right: 175, bottom: 100, left: 60 }}
+         width={900}
+         height={500}
+         animate={true}
+         // enableSlices={false}
+      />
+   );
+};
