@@ -115,8 +115,14 @@ const Plot = () => {
    const yAchseSummeFlowEmden = zipWith(yAchseFlowEmdenOGE, yAchseFlowEmdenGUD, yAchseFlowEmdenGTS, (a, b, c) => a + b + c);
    const yAchseSummeFlowDornum = yAchseFlowDornumOGE;
 
-   plotDataFlow.push({ id: "Dornum (Summe Entry)", data: zipWith(xAchseFlowDornumOGE, yAchseSummeFlowDornum, (a, b) => ({ x: a, y: b })) });
-   plotDataFlow.push({ id: "Emden (Summe Entry)", data: zipWith(xAchseFlowEmdenOGE, yAchseSummeFlowEmden, (a, b) => ({ x: a, y: b })) });
+   plotDataFlow.push({
+      id: "Dornum (Summe Entry)",
+      data: zipWith(xAchseFlowDornumOGE, yAchseSummeFlowDornum, (a, b) => ({ x: a, y: b })).filter(el => !isNaN(el.y))
+   });
+   plotDataFlow.push({
+      id: "Emden (Summe Entry)",
+      data: zipWith(xAchseFlowEmdenOGE, yAchseSummeFlowEmden, (a, b) => ({ x: a, y: b })).filter(el => !isNaN(el.y))
+   });
 
    const plotDataAllocation = resultsAllocation.map(el => ({
       id: punkte.find(p => p.id === el.data.meta.query.pointDirection).name,
