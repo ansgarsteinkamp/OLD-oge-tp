@@ -30,14 +30,14 @@ export default function App() {
    );
 }
 
-const axiosENTSOG = async (id, type) => {
+const axiosENTSOG = async (id, type, tageVergangenheit) => {
    // id: "DE-TSO-0009ITP-00080entry"
    // type: "Physical+Flow" bzw. "Allocation"
 
    const jetzt = new Date();
 
    const from = "2022-11-01";
-   const to = formatISO(subDays(jetzt, 1), { representation: "date" });
+   const to = formatISO(subDays(jetzt, tageVergangenheit), { representation: "date" });
 
    const { data } = await axios.get(
       `https://transparency.entsog.eu/api/v1/operationalData?limit=-1&cutPeriods=true&periodize=0&indicator=${type}&pointDirection=${id}&from=${from}&to=${to}&timezone=CET&periodType=day`
@@ -83,13 +83,17 @@ const Plot = () => {
    const [allocation, setAllocation] = useState(false);
    const [MSm3, setMSm3] = useState(false);
    const [proStunde, setProStunde] = useState(false);
+   const [tageVergangenheit, setTageVergangenheit] = useState(1);
 
    const resultsFlow = useQueries({
-      queries: punkte.map(el => ({ queryKey: [el.id, "Physical+Flow"], queryFn: () => axiosENTSOG(el.id, "Physical+Flow") }))
+      queries: punkte.map(el => ({
+         queryKey: [el.id, "Physical+Flow", tageVergangenheit],
+         queryFn: () => axiosENTSOG(el.id, "Physical+Flow", tageVergangenheit)
+      }))
    });
 
    const resultsAllocation = useQueries({
-      queries: punkte.map(el => ({ queryKey: [el.id, "Allocation"], queryFn: () => axiosENTSOG(el.id, "Allocation") }))
+      queries: punkte.map(el => ({ queryKey: [el.id, "Allocation", tageVergangenheit], queryFn: () => axiosENTSOG(el.id, "Allocation", tageVergangenheit) }))
    });
 
    const isLoading = resultsFlow.some(el => el.isLoading) || resultsAllocation.some(el => el.isLoading);
@@ -114,16 +118,6 @@ const Plot = () => {
    const xAchseFlowDornumOGE = plotDataFlow.find(el => el.id === "Dornum OGE").data.map(el => el.x);
    const xAchseFlowDornumGUD = plotDataFlow.find(el => el.id === "Dornum GUD").data.map(el => el.x);
    const xAchseFlowDornumGASPOOL = plotDataFlow.find(el => el.id === "Dornum GASPOOL").data.map(el => el.x);
-
-   if (
-      !isEqual(xAchseFlowEmdenOGE, xAchseFlowEmdenGUD) ||
-      !isEqual(xAchseFlowEmdenOGE, xAchseFlowEmdenGTS) ||
-      !isEqual(xAchseFlowEmdenOGE, xAchseFlowEmdenTG) ||
-      !isEqual(xAchseFlowEmdenOGE, xAchseFlowDornumOGE) ||
-      !isEqual(xAchseFlowEmdenOGE, xAchseFlowDornumGUD) ||
-      !isEqual(xAchseFlowEmdenOGE, xAchseFlowDornumGASPOOL)
-   )
-      return <div>Datenfehler ENTSOG-TP (inkonsistente Zeitachsen Gasfluss)</div>;
 
    const yAchseFlowEmdenOGE = plotDataFlow.find(el => el.id === "Emden OGE").data.map(el => el.y);
    const yAchseFlowEmdenGUD = plotDataFlow.find(el => el.id === "Emden GUD").data.map(el => el.y);
@@ -154,16 +148,6 @@ const Plot = () => {
    const xAchseAllocationDornumOGE = plotDataAllocation.find(el => el.id === "Dornum OGE").data.map(el => el.x);
    const xAchseAllocationDornumGUD = plotDataAllocation.find(el => el.id === "Dornum GUD").data.map(el => el.x);
    const xAchseAllocationDornumGASPOOL = plotDataAllocation.find(el => el.id === "Dornum GASPOOL").data.map(el => el.x);
-
-   if (
-      !isEqual(xAchseAllocationEmdenOGE, xAchseAllocationEmdenGUD) ||
-      !isEqual(xAchseAllocationEmdenOGE, xAchseAllocationEmdenGTS) ||
-      !isEqual(xAchseAllocationEmdenOGE, xAchseAllocationEmdenTG) ||
-      !isEqual(xAchseAllocationEmdenOGE, xAchseAllocationDornumOGE) ||
-      !isEqual(xAchseAllocationEmdenOGE, xAchseAllocationDornumGUD) ||
-      !isEqual(xAchseAllocationEmdenOGE, xAchseAllocationDornumGASPOOL)
-   )
-      return <div>Datenfehler ENTSOG-TP (inkonsistente Zeitachsen Allokation)</div>;
 
    const yAchseAllocationEmdenOGE = plotDataAllocation.find(el => el.id === "Emden OGE").data.map(el => el.y);
    const yAchseAllocationEmdenGUD = plotDataAllocation.find(el => el.id === "Emden GUD").data.map(el => el.y);
@@ -214,6 +198,24 @@ const Plot = () => {
    );
 
    const maxY = Math.max(...flowPlot.map(el => Math.max(...el.data.map(el => el.y))), ...allocationPlot.map(el => Math.max(...el.data.map(el => el.y))));
+
+   if (
+      !isEqual(xAchseFlowEmdenOGE, xAchseFlowEmdenGUD) ||
+      !isEqual(xAchseFlowEmdenOGE, xAchseFlowEmdenGTS) ||
+      !isEqual(xAchseFlowEmdenOGE, xAchseFlowEmdenTG) ||
+      !isEqual(xAchseFlowEmdenOGE, xAchseFlowDornumOGE) ||
+      !isEqual(xAchseFlowEmdenOGE, xAchseFlowDornumGUD) ||
+      !isEqual(xAchseFlowEmdenOGE, xAchseFlowDornumGASPOOL) ||
+      !isEqual(xAchseAllocationEmdenOGE, xAchseAllocationEmdenGUD) ||
+      !isEqual(xAchseAllocationEmdenOGE, xAchseAllocationEmdenGTS) ||
+      !isEqual(xAchseAllocationEmdenOGE, xAchseAllocationEmdenTG) ||
+      !isEqual(xAchseAllocationEmdenOGE, xAchseAllocationDornumOGE) ||
+      !isEqual(xAchseAllocationEmdenOGE, xAchseAllocationDornumGUD) ||
+      !isEqual(xAchseAllocationEmdenOGE, xAchseAllocationDornumGASPOOL)
+   )
+      setTageVergangenheit(tageVergangenheit => tageVergangenheit + 1);
+
+   console.log("Enddatum:", formatISO(subDays(new Date(), tageVergangenheit), { representation: "date" }));
 
    return (
       <div className="flex justify-center mt-10">
