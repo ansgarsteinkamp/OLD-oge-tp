@@ -2,8 +2,6 @@ import { useState } from "react";
 
 import { QueryClient, QueryClientProvider, useQueries } from "@tanstack/react-query";
 
-import { Line } from "@nivo/line";
-
 import axios from "axios";
 
 import { subDays, formatISO } from "date-fns";
@@ -11,13 +9,15 @@ import { subDays, formatISO } from "date-fns";
 import isEqual from "lodash/isEqual.js";
 import zipWith from "lodash/zipWith.js";
 
-import MySwitch from "./UI/Switch";
+import MyLine from "./components/MyLine";
+import MySwitch from "./components/Switch";
 
 const queryClient = new QueryClient({
    defaultOptions: {
       queries: {
-         staleTime: 480 * 60 * 1000, // 480 Minuten = 8 Stunden
-         cacheTime: 960 * 60 * 1000 // 960 Minuten = 16 Stunden
+         staleTime: 24 * 60 * 60 * 1000, // 24 Stunden
+         cacheTime: 48 * 60 * 60 * 1000, // 48 Stunden
+         retry: false
       }
    }
 });
@@ -62,6 +62,7 @@ const punkte = [
    { id: "dk-tso-0001itp-00630entry", name: "Nybro (NO \u2192 PL)" },
    { id: "FR-TSO-0003ITP-00045entry", name: "Dunkerque (NO \u2192 FR)" },
    { id: "BE-TSO-0001ITP-00106entry", name: "Zeebrugge ZPT (NO \u2192 BE)" }
+   // { id: "UK-TSO-0001ITP-00022entry", name: "St. Fergus (NO \u2192 GB)" }
 ];
 
 const resultsToPlotData = (results, MSm3, proStunde) => {
@@ -110,6 +111,8 @@ const Plot = () => {
    legendeLinks += proStunde ? " (Tagesmittel)" : "";
 
    const plotDataFlow = resultsToPlotData(resultsFlow, MSm3, proStunde);
+
+   // console.log(plotDataFlow[0]);
 
    const xAchseFlowEmdenOGE = plotDataFlow.find(el => el.id === "Emden OGE").data.map(el => el.x);
    const xAchseFlowEmdenGUD = plotDataFlow.find(el => el.id === "Emden GUD").data.map(el => el.x);
@@ -247,94 +250,5 @@ const Plot = () => {
             {allocation && <MyLine data={allocationPlot} maxY={maxY} legendeLinks={legendeLinks} einheitTooltip={einheit} />}
          </div>
       </div>
-   );
-};
-
-const MyLine = ({ data, maxY, legendeLinks, einheitTooltip }) => {
-   return (
-      <Line
-         theme={{
-            fontSize: 11,
-            axis: {
-               legend: {
-                  text: { fontSize: 12, fontWeight: "bold" }
-               }
-            },
-            tooltip: {
-               container: {
-                  background: "#ffffff",
-                  color: "#333333",
-                  fontSize: 8
-               },
-               basic: {},
-               chip: {},
-               table: {},
-               tableCell: {},
-               tableCellValue: {}
-            }
-         }}
-         data={data}
-         colors={{ scheme: "nivo" }}
-         xScale={{
-            type: "time",
-            format: "%Y-%m-%d",
-            useUTC: false,
-            precision: "day"
-         }}
-         xFormat="time:%Y-%m-%d"
-         yScale={{
-            type: "linear",
-            min: 0,
-            max: maxY
-         }}
-         // yFormat=" >-.3~r"
-         yFormat={value =>
-            `${Number(value).toLocaleString("de-DE", {
-               maximumSignificantDigits: 3
-            })} ${einheitTooltip}`
-         }
-         axisLeft={{
-            legend: legendeLinks,
-            legendOffset: -48,
-            legendPosition: "middle"
-         }}
-         axisBottom={{
-            format: "%d.%m.",
-            tickValues: "every 1 week",
-            legend: "Datum",
-            legendOffset: 40,
-            legendPosition: "middle"
-         }}
-         curve="monotoneX"
-         pointSize={3}
-         pointBorderWidth={1}
-         pointBorderColor={{
-            from: "color",
-            modifiers: [["darker", 0.3]]
-         }}
-         useMesh={true}
-         legends={[
-            {
-               anchor: "bottom-right",
-               direction: "column",
-               justify: false,
-               translateX: 100,
-               translateY: 0,
-               itemsSpacing: 0,
-               itemDirection: "left-to-right",
-               itemWidth: 80,
-               itemHeight: 20,
-               itemOpacity: 0.75,
-               symbolSize: 10,
-               symbolShape: "circle",
-               symbolBorderColor: "rgba(0, 0, 0, .5)"
-            }
-         ]}
-         enableSlices="x"
-         margin={{ top: 0, right: 175, bottom: 100, left: 60 }}
-         width={900}
-         height={500}
-         animate={true}
-      />
    );
 };
