@@ -6,8 +6,8 @@ import axios from "axios";
 
 import { subDays, formatISO } from "date-fns";
 
-import isEqual from "lodash/isEqual.js";
 import zipWith from "lodash/zipWith.js";
+import intersection from "lodash/intersection.js";
 
 import MyLine from "./components/MyLine";
 import MySwitch from "./components/Switch";
@@ -84,7 +84,8 @@ const Plot = () => {
    const [allocation, setAllocation] = useState(false);
    const [MSm3, setMSm3] = useState(false);
    const [proStunde, setProStunde] = useState(false);
-   const [tageVergangenheit, setTageVergangenheit] = useState(1);
+
+   const tageVergangenheit = 1; // Letzter Tag der Zeitreihe = gestern
 
    const resultsFlow = useQueries({
       queries: punkte.map(el => ({
@@ -112,34 +113,33 @@ const Plot = () => {
 
    const plotDataFlow = resultsToPlotData(resultsFlow, MSm3, proStunde);
 
-   // console.log(plotDataFlow[0]);
-
    const xAchseFlowEmdenOGE = plotDataFlow.find(el => el.id === "Emden OGE").data.map(el => el.x);
    const xAchseFlowEmdenGUD = plotDataFlow.find(el => el.id === "Emden GUD").data.map(el => el.x);
    const xAchseFlowEmdenGTS = plotDataFlow.find(el => el.id === "Emden GTS").data.map(el => el.x);
-   const xAchseFlowEmdenTG = plotDataFlow.find(el => el.id === "Emden TG").data.map(el => el.x);
-   const xAchseFlowDornumOGE = plotDataFlow.find(el => el.id === "Dornum OGE").data.map(el => el.x);
-   const xAchseFlowDornumGUD = plotDataFlow.find(el => el.id === "Dornum GUD").data.map(el => el.x);
-   const xAchseFlowDornumGASPOOL = plotDataFlow.find(el => el.id === "Dornum GASPOOL").data.map(el => el.x);
 
-   const yAchseFlowEmdenOGE = plotDataFlow.find(el => el.id === "Emden OGE").data.map(el => el.y);
-   const yAchseFlowEmdenGUD = plotDataFlow.find(el => el.id === "Emden GUD").data.map(el => el.y);
-   const yAchseFlowEmdenGTS = plotDataFlow.find(el => el.id === "Emden GTS").data.map(el => el.y);
-   // const yAchseFlowEmdenTG = plotDataFlow.find(el => el.id === "Emden TG").data.map(el => el.y);
-   const yAchseFlowDornumOGE = plotDataFlow.find(el => el.id === "Dornum OGE").data.map(el => el.y);
-   // const yAchseFlowDornumGUD = plotDataFlow.find(el => el.id === "Dornum GUD").data.map(el => el.y);
-   // const yAchseFlowDornumGASPOOL = plotDataFlow.find(el => el.id === "Dornum GASPOOL").data.map(el => el.y);
+   // x-Achse reduziert auf Tage, die in allen Datensätzen vorkommen
+   const xAchseFlowEmdenREDUZIERT = intersection(xAchseFlowEmdenOGE, xAchseFlowEmdenGUD, xAchseFlowEmdenGTS);
+
+   const yAchseFlowEmdenOGE = xAchseFlowEmdenREDUZIERT.map(tag => plotDataFlow.find(el => el.id === "Emden OGE").data.find(el => el.x === tag).y);
+   const yAchseFlowEmdenGUD = xAchseFlowEmdenREDUZIERT.map(tag => plotDataFlow.find(el => el.id === "Emden GUD").data.find(el => el.x === tag).y);
+   const yAchseFlowEmdenGTS = xAchseFlowEmdenREDUZIERT.map(tag => plotDataFlow.find(el => el.id === "Emden GTS").data.find(el => el.x === tag).y);
+
+   // const yAchseFlowEmdenOGE = plotDataFlow.find(el => el.id === "Emden OGE").data.map(el => el.y);
+   // const yAchseFlowEmdenGUD = plotDataFlow.find(el => el.id === "Emden GUD").data.map(el => el.y);
+   // const yAchseFlowEmdenGTS = plotDataFlow.find(el => el.id === "Emden GTS").data.map(el => el.y);
 
    const yAchseSummeFlowEmden = zipWith(yAchseFlowEmdenOGE, yAchseFlowEmdenGUD, yAchseFlowEmdenGTS, (a, b, c) => a + b + c);
-   const yAchseSummeFlowDornum = yAchseFlowDornumOGE;
+
+   const xAchseFlowDornumOGE = plotDataFlow.find(el => el.id === "Dornum OGE").data.map(el => el.x);
+   const yAchseFlowDornumOGE = plotDataFlow.find(el => el.id === "Dornum OGE").data.map(el => el.y); // = Summe Flow Dornum
 
    plotDataFlow.push({
       id: "Dornum (Summe Entry)",
-      data: zipWith(xAchseFlowDornumOGE, yAchseSummeFlowDornum, (a, b) => ({ x: a, y: b })).filter(el => !isNaN(el.y))
+      data: zipWith(xAchseFlowDornumOGE, yAchseFlowDornumOGE, (a, b) => ({ x: a, y: b })).filter(el => !isNaN(el.y))
    });
    plotDataFlow.push({
       id: "Emden (Summe Entry)",
-      data: zipWith(xAchseFlowEmdenOGE, yAchseSummeFlowEmden, (a, b) => ({ x: a, y: b })).filter(el => !isNaN(el.y))
+      data: zipWith(xAchseFlowEmdenREDUZIERT, yAchseSummeFlowEmden, (a, b) => ({ x: a, y: b })).filter(el => !isNaN(el.y))
    });
 
    const plotDataAllocation = resultsToPlotData(resultsAllocation, MSm3, proStunde);
@@ -152,13 +152,39 @@ const Plot = () => {
    const xAchseAllocationDornumGUD = plotDataAllocation.find(el => el.id === "Dornum GUD").data.map(el => el.x);
    const xAchseAllocationDornumGASPOOL = plotDataAllocation.find(el => el.id === "Dornum GASPOOL").data.map(el => el.x);
 
-   const yAchseAllocationEmdenOGE = plotDataAllocation.find(el => el.id === "Emden OGE").data.map(el => el.y);
-   const yAchseAllocationEmdenGUD = plotDataAllocation.find(el => el.id === "Emden GUD").data.map(el => el.y);
-   const yAchseAllocationEmdenGTS = plotDataAllocation.find(el => el.id === "Emden GTS").data.map(el => el.y);
-   const yAchseAllocationEmdenTG = plotDataAllocation.find(el => el.id === "Emden TG").data.map(el => el.y);
-   const yAchseAllocationDornumOGE = plotDataAllocation.find(el => el.id === "Dornum OGE").data.map(el => el.y);
-   const yAchseAllocationDornumGUD = plotDataAllocation.find(el => el.id === "Dornum GUD").data.map(el => el.y);
-   const yAchseAllocationDornumGASPOOL = plotDataAllocation.find(el => el.id === "Dornum GASPOOL").data.map(el => el.y);
+   // x-Achse reduziert auf Tage, die in allen Datensätzen vorkommen
+   const xAchseAllocationEmdenREDUZIERT = intersection(xAchseAllocationEmdenOGE, xAchseAllocationEmdenGUD, xAchseAllocationEmdenGTS, xAchseAllocationEmdenTG);
+   const xAchseAllocationDornumREDUZIERT = intersection(xAchseAllocationDornumOGE, xAchseAllocationDornumGUD, xAchseAllocationDornumGASPOOL);
+
+   const yAchseAllocationEmdenOGE = xAchseAllocationEmdenREDUZIERT.map(
+      tag => plotDataAllocation.find(el => el.id === "Emden OGE").data.find(el => el.x === tag).y
+   );
+   const yAchseAllocationEmdenGUD = xAchseAllocationEmdenREDUZIERT.map(
+      tag => plotDataAllocation.find(el => el.id === "Emden GUD").data.find(el => el.x === tag).y
+   );
+   const yAchseAllocationEmdenGTS = xAchseAllocationEmdenREDUZIERT.map(
+      tag => plotDataAllocation.find(el => el.id === "Emden GTS").data.find(el => el.x === tag).y
+   );
+   const yAchseAllocationEmdenTG = xAchseAllocationEmdenREDUZIERT.map(
+      tag => plotDataAllocation.find(el => el.id === "Emden TG").data.find(el => el.x === tag).y
+   );
+   const yAchseAllocationDornumOGE = xAchseAllocationDornumREDUZIERT.map(
+      tag => plotDataAllocation.find(el => el.id === "Dornum OGE").data.find(el => el.x === tag).y
+   );
+   const yAchseAllocationDornumGUD = xAchseAllocationDornumREDUZIERT.map(
+      tag => plotDataAllocation.find(el => el.id === "Dornum GUD").data.find(el => el.x === tag).y
+   );
+   const yAchseAllocationDornumGASPOOL = xAchseAllocationDornumREDUZIERT.map(
+      tag => plotDataAllocation.find(el => el.id === "Dornum GASPOOL").data.find(el => el.x === tag).y
+   );
+
+   // const yAchseAllocationEmdenOGE = plotDataAllocation.find(el => el.id === "Emden OGE").data.map(el => el.y);
+   // const yAchseAllocationEmdenGUD = plotDataAllocation.find(el => el.id === "Emden GUD").data.map(el => el.y);
+   // const yAchseAllocationEmdenGTS = plotDataAllocation.find(el => el.id === "Emden GTS").data.map(el => el.y);
+   // const yAchseAllocationEmdenTG = plotDataAllocation.find(el => el.id === "Emden TG").data.map(el => el.y);
+   // const yAchseAllocationDornumOGE = plotDataAllocation.find(el => el.id === "Dornum OGE").data.map(el => el.y);
+   // const yAchseAllocationDornumGUD = plotDataAllocation.find(el => el.id === "Dornum GUD").data.map(el => el.y);
+   // const yAchseAllocationDornumGASPOOL = plotDataAllocation.find(el => el.id === "Dornum GASPOOL").data.map(el => el.y);
 
    const yAchseSummeAllocationEmden = zipWith(
       yAchseAllocationEmdenOGE,
@@ -171,11 +197,11 @@ const Plot = () => {
 
    plotDataAllocation.push({
       id: "Dornum (Summe Entry)",
-      data: zipWith(xAchseAllocationDornumOGE, yAchseSummeAllocationDornum, (a, b) => ({ x: a, y: b })).filter(el => !isNaN(el.y))
+      data: zipWith(xAchseAllocationDornumREDUZIERT, yAchseSummeAllocationDornum, (a, b) => ({ x: a, y: b })).filter(el => !isNaN(el.y))
    });
    plotDataAllocation.push({
       id: "Emden (Summe Entry)",
-      data: zipWith(xAchseAllocationEmdenOGE, yAchseSummeAllocationEmden, (a, b) => ({ x: a, y: b })).filter(el => !isNaN(el.y))
+      data: zipWith(xAchseAllocationEmdenREDUZIERT, yAchseSummeAllocationEmden, (a, b) => ({ x: a, y: b })).filter(el => !isNaN(el.y))
    });
 
    const flowPlot = plotDataFlow.filter(
@@ -201,24 +227,6 @@ const Plot = () => {
    );
 
    const maxY = Math.max(...flowPlot.map(el => Math.max(...el.data.map(el => el.y))), ...allocationPlot.map(el => Math.max(...el.data.map(el => el.y))));
-
-   if (
-      !isEqual(xAchseFlowEmdenOGE, xAchseFlowEmdenGUD) ||
-      !isEqual(xAchseFlowEmdenOGE, xAchseFlowEmdenGTS) ||
-      !isEqual(xAchseFlowEmdenOGE, xAchseFlowEmdenTG) ||
-      !isEqual(xAchseFlowEmdenOGE, xAchseFlowDornumOGE) ||
-      !isEqual(xAchseFlowEmdenOGE, xAchseFlowDornumGUD) ||
-      !isEqual(xAchseFlowEmdenOGE, xAchseFlowDornumGASPOOL) ||
-      !isEqual(xAchseAllocationEmdenOGE, xAchseAllocationEmdenGUD) ||
-      !isEqual(xAchseAllocationEmdenOGE, xAchseAllocationEmdenGTS) ||
-      !isEqual(xAchseAllocationEmdenOGE, xAchseAllocationEmdenTG) ||
-      !isEqual(xAchseAllocationEmdenOGE, xAchseAllocationDornumOGE) ||
-      !isEqual(xAchseAllocationEmdenOGE, xAchseAllocationDornumGUD) ||
-      !isEqual(xAchseAllocationEmdenOGE, xAchseAllocationDornumGASPOOL)
-   )
-      setTageVergangenheit(tageVergangenheit => tageVergangenheit + 1);
-
-   console.log("Enddatum:", formatISO(subDays(new Date(), tageVergangenheit), { representation: "date" }));
 
    return (
       <div className="flex justify-center mt-10">
