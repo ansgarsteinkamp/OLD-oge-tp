@@ -85,7 +85,7 @@ const Plot = () => {
    const [MSm3, setMSm3] = useState(false);
    const [proStunde, setProStunde] = useState(false);
 
-   const tageVergangenheit = 1; // Letzter Tag der Zeitreihe = gestern
+   const tageVergangenheit = 2; // Letzter Tag der Zeitreihe = vorgestern
 
    const resultsFlow = useQueries({
       queries: punkte.map(el => ({
