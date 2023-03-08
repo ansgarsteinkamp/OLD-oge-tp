@@ -49,8 +49,8 @@ const MyLine = ({ data, maxY, legendeLinks, einheitTooltip }) => {
             legendPosition: "middle"
          }}
          axisBottom={{
-            format: "%d.%m.",
-            tickValues: "every 1 week",
+            format: "%d.%m.%Y",
+            tickValues: "every 1 month",
             legend: "Datum",
             legendOffset: 40,
             legendPosition: "middle"
@@ -81,7 +81,7 @@ const MyLine = ({ data, maxY, legendeLinks, einheitTooltip }) => {
             }
          ]}
          enableSlices="x"
-         margin={{ top: 0, right: 175, bottom: 100, left: 60 }}
+         margin={{ top: 0, right: 200, bottom: 100, left: 60 }}
          width={900}
          height={500}
          animate={true}

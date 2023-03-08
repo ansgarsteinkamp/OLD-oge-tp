@@ -36,7 +36,7 @@ const axiosENTSOG = async (id, type, tageVergangenheit) => {
 
    const jetzt = new Date();
 
-   const from = "2022-11-01";
+   const from = "2022-07-01";
    const to = formatISO(subDays(jetzt, tageVergangenheit), { representation: "date" });
 
    const { data } = await axios.get(
@@ -138,7 +138,7 @@ const Plot = () => {
       data: zipWith(xAchseFlowDornumOGE, yAchseFlowDornumOGE, (a, b) => ({ x: a, y: b })).filter(el => !isNaN(el.y))
    });
    plotDataFlow.push({
-      id: "Emden (Summe Entry)",
+      id: "Emden (Summe Entry inkl. NL)",
       data: zipWith(xAchseFlowEmdenREDUZIERT, yAchseSummeFlowEmden, (a, b) => ({ x: a, y: b })).filter(el => !isNaN(el.y))
    });
 
@@ -200,7 +200,7 @@ const Plot = () => {
       data: zipWith(xAchseAllocationDornumREDUZIERT, yAchseSummeAllocationDornum, (a, b) => ({ x: a, y: b })).filter(el => !isNaN(el.y))
    });
    plotDataAllocation.push({
-      id: "Emden (Summe Entry)",
+      id: "Emden (Summe Entry inkl. NL)",
       data: zipWith(xAchseAllocationEmdenREDUZIERT, yAchseSummeAllocationEmden, (a, b) => ({ x: a, y: b })).filter(el => !isNaN(el.y))
    });
 
